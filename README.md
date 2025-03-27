@@ -209,13 +209,23 @@ echo htmlspecialchars($output, ENT_QUOTES, 'UTF-8');
 Permitimos la ejecución de comandos ls, whoami, pwd, el resto dará mensaje de "comando no permitido".
 
 
-Ante la consulta `http://localhost/rce.php?cmd=ls` si nos permite ejecutar el comando ls
+Ante la consulta:
+
+~~~
+http://localhost/rce.php?cmd=ls
+~~~
+
+si nos permite ejecutar el comando ls
 
 ![](images/rce7.png)
 
-Pero sin embargo no nos permite la consulta `http://localhost/rce.php?cmd=cat /etc/passwd`
+Pero sin embargo no nos permite la consulta:
 
-![](images/rce7.png)
+~~~
+http://localhost/rce.php?cmd=cat /etc/passwd
+
+~~~
+![](images/rce8.png)
 
 _Beneficios:_
 
@@ -251,10 +261,13 @@ if (isset($_GET['cmd'])) {
     }
 }
 ?>
-- Escapa caracteres especiales con escapeshellcmd() para mayor seguridad.
-Si contienen caracteres especiales, exec no va a realizar ninguna consulta, por lo que comprobamos y mostramos aviso de error.
+~~~
 
-Si queremos que sólo se utilicen comandos simples sin argumentos y sin concatenar, podemos añadir un paso de seguridad con escapeshellarg(). Cambiamos la línea:
+- Escapa caracteres especiales con escapeshellcmd() para mayor seguridad.
+
+> Si contienen caracteres especiales, exec no va a realizar ninguna consulta, por lo que comprobamos y mostramos aviso de error.
+>
+> Si queremos que sólo se utilicen comandos simples sin argumentos y sin concatenar, podemos añadir un paso de seguridad con escapeshellarg(). Cambiamos la línea:
 
 ~~~
     $cmd_safe = escapeshellarg($cmd);
@@ -273,17 +286,21 @@ Ejemplo: Si alguien intenta enviar:
 ~~~
 http://localhost/rce.php?cmd=ping 8.8.8.8; rm -rf /
 ~~~
+
 La función **escapeshellarg()** convertirá la entrada en:  'ping 8.8.8.8; rm -rf/), eliminará todo el comando y no ejecuta nada. Por eso controlamos cadena vacía.
 
 ![](images/rce9.png)
 
 **Deshabilitar shell_exec() en PHP**
+
 Si no se necesita ejecución de comandos en todo el servidor, deshabilitar las funciones peligrosas en php.ini.
+
 Editar php.ini, para ello utilizamos el editor de texto nano (o el que prefiramos) para abrir la configuración de PHP de nuestro contenedor
 
 ~~~
 docker exec -it lamp-php83 /bin/bash
 ~~~
+
 Si estamos utilizando la pila LAMP con docker del laborario podemos ver en el archivo de configuración docker-compose.yml que hemos cambiado la ubicación de php:
 
 ![](images/rce10.png)
@@ -295,9 +312,7 @@ Por lo tanto abrimos el archivo de configuración:
 
 ~~~
 sudo nano /usr/local/etc/php/php.ini
-
 ~~~
-
 
 Buscar la línea disable_functions y agregar lo siguiente:
 
