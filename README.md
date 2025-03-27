@@ -20,15 +20,18 @@ Esta es una vulnerabilidad muy similar a una vulnerabilidad de inyección de len
 
 
 Consecuencias de RCE:
+
 • Acceso a información sensible (usuarios, archivos, configuración).
+
 • Ejecución de comandos maliciosos (descarga y ejecución de malware).
+
 • Escalada de privilegios y control total del sistema.
 
 ## ACTIVIDADES A REALIZAR
 ---
 > Lee el siguiente [documento sobre Explotación y Mitigación de ataques de Remote Code Execution](./files/ExplotacionYMitigacionRCE.pdf)
 > 
-> También y como marco de referencia, tienes [ la sección de correspondiente de ataque XSS reglejado de la **Proyecto Web Security Testing Guide** (WSTG) del proyecto **OWASP**.]<> También y como marco de referencia, tienes [ la sección de correspondiente de ataque XSS reglejado de la **Proyecto Web Security Testing Guide** (WSTG) del proyecto **OWASP**.]<https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/07-Input_Validation_Testing/08-Testing_for_SSI_Injection>
+> También y como marco de referencia, tienes [ la sección de correspondiente de ataque XSS reglejado de la **Proyecto Web Security Testing Guide** (WSTG) del proyecto **OWASP**.](https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/07-Input_Validation_Testing/08-Testing_for_SSI_Injection)
 >
 
 Vamos realizando operaciones:
@@ -68,7 +71,12 @@ http://localhost/rce.php
 
 Si introducimos una dirección ip se nos muestra si el servidor está accesible
 
-Sin embargo podemos anudar consultas con el operador & por ejemplo `8.8.8.8 & id` que nos mostraría el usuario con el que estamos ejecutando las sentencias php:
+**Ver información del usuario**
+Sin embargo podemos anudar consultas con el operador & por ejemplo 
+~~~
+8.8.8.8 & id
+~~~
+ que nos mostraría el usuario con el que estamos ejecutando las sentencias php:
 
 ![](images/rce2.png)
 
@@ -78,8 +86,10 @@ Si se muestra información del sistema o similar (uid=1000(user) gid=1000(user))
 
 **Intentar listar archivos del servidor:**
 
-Podemos llegar a listar los archivos del directorio donde se encuentra el archivo rce.php con 8.8.8.8 & ls
-
+Podemos llegar a listar los archivos del directorio donde se encuentra el archivo rce.php con 
+~~~
+8.8.8.8 & ls
+~~~
 Si se muestran archivos del sistema en pantalla, el ataque funciona.
 
 ![](images/rce4.png)
@@ -108,10 +118,13 @@ Introducimos codigo para concatenar la ip del servidor dns de Google, con descar
 
 Si lo realiza, estará instalando en el directorio b374k un shell basado en PHP. Luego podremos acceder a él y ejecutar los comandos que queramos.
 
+![](images/rce4.png)
+
 ~~~
 http://localhost/b374k/index.php
 ~~~
-![](images/rce4.png)
+
+![](images/rce14.png)
 
 El atacante tiene control total del sistema.
 
@@ -162,12 +175,13 @@ Si la ejecución de comandos no es necesaria, deshabilitar la funcionalidad comp
 
 Código seguro (rce.php sin posibilidad de ejecución de comandos ya que se elimina totalmente)
 
-~~
+~~~
 <?php
 die("Esta funcionalidad ha sido deshabilitada por razones de seguridad.");
 ?>
 ~~~
-**Beneficios:**
+
+_Beneficios:_
 
 - Bloquea cualquier intento de ejecución de código en el sistema.
 
