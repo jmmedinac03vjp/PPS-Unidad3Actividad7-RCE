@@ -29,10 +29,12 @@ Consecuencias de RCE:
 
 ## ACTIVIDADES A REALIZAR
 ---
+> Lee detenidamente la sección de Inyección de comandos de la página de PortWigger <https://portswigger.net/web-security/os-command-injection>
+
 > Lee el siguiente [documento sobre Explotación y Mitigación de ataques de Remote Code Execution](./files/ExplotacionYMitigacionRCE.pdf)
-> 
+
 > También y como marco de referencia, tienes [ la sección de correspondiente de ataque XSS reglejado de la **Proyecto Web Security Testing Guide** (WSTG) del proyecto **OWASP**.](https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/07-Input_Validation_Testing/08-Testing_for_SSI_Injection)
->
+
 
 Vamos realizando operaciones:
 
