@@ -8,7 +8,7 @@ Tenemos como objetivo:
 >
 > - Implementar diferentes modificaciones del codigo para aplicar mitigaciones o soluciones.
 
-## ¿Qué es CSRF?
+## ¿Qué es RCE?
 ---
 Los servidores web generalmente brindan a los desarrolladores la capacidad de agregar pequeñas piezas de código dinámico dentro de páginas HTML estáticas, sin tener que lidiar con lenguajes completos del lado del servidor o del lado del cliente. Esta característica es proporcionada por El lado del servidor incluye(SSI).
 
@@ -26,7 +26,7 @@ Consecuencias de RCE:
 
 ## ACTIVIDADES A REALIZAR
 ---
-> Lee el siguiente [documento sobre Explotación y Mitigación de ataques de Remote Code Execution](./files/ExplotacionYMitigacionRCE.pdf>
+> Lee el siguiente [documento sobre Explotación y Mitigación de ataques de Remote Code Execution](./files/ExplotacionYMitigacionRCE.pdf)
 > 
 > También y como marco de referencia, tienes [ la sección de correspondiente de ataque XSS reglejado de la **Proyecto Web Security Testing Guide** (WSTG) del proyecto **OWASP**.]<> También y como marco de referencia, tienes [ la sección de correspondiente de ataque XSS reglejado de la **Proyecto Web Security Testing Guide** (WSTG) del proyecto **OWASP**.]<https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/07-Input_Validation_Testing/08-Testing_for_SSI_Injection>
 >
@@ -116,7 +116,46 @@ http://localhost/b374k/index.php
 El atacante tiene control total del sistema.
 
 ### Mitigaciones de RCE
-Para las miti
+Para las mitigaciones vamos a utilizar otros archivos: 
+
+Este es el contenido de rce.php
+~~~
+<?php
+$output = shell_exec($_GET['cmd']);
+echo "<pre>$output</pre>";
+?>
+~~~
+
+El archivo rce.php nos va a permitar ejecutar comandos de forma que podemos llamarlo desde otros archivos o bien directamente de la forma:
+~~~
+http://localhost/rce.php?cmd=cat /etc/passwd
+~~~
+
+Por otra parte tenemos el archivo index.php 
+
+~~~
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ejecutar Comando</title>
+</head>
+<body>
+    <h2>Ingrese el comando a ejecutar</h2>
+    <form method="get" action="http://localhost/rce.php">
+        <input type="text" name="cmd" placeholder="Ejemplo: whoami" required>
+        <button type="submit">Ejecutar</button>
+    </form>
+</body>
+</html>
+~~~
+que lo que hace es crearnos un input para solicitarnos el código a ejecutar y luego, llamar con él, a rce.php.
+
+![](images/rce6.png)
+
+Vamos a modificar rce.php para mitigar las vulnerabilidades.
+
 **Eliminar el uso de shell_exec()**
 ---
 Si la ejecución de comandos no es necesaria, deshabilitar la funcionalidad completamente.
@@ -148,7 +187,7 @@ $allowed_cmds = ["ls", "whoami", "pwd"];
 if (!isset($_GET['cmd']) || !in_array($_GET['cmd'], $allowed_cmds)) {
         die("Comando no permitido.");
 }
-$output = shell_exec(escapeshellcmd($_GET['cmd']));
+$output = shell_exec($_GET['cmd']);
 echo htmlspecialchars($output, ENT_QUOTES, 'UTF-8');
 ?>
 ~~~
@@ -158,11 +197,11 @@ Permitimos la ejecución de comandos ls, whoami, pwd, el resto dará mensaje de 
 
 Ante la consulta `http://localhost/rce.php?cmd=ls` si nos permite ejecutar el comando ls
 
-![](images/rce5.png)
+![](images/rce7.png)
 
 Pero sin embargo no nos permite la consulta `http://localhost/rce.php?cmd=cat /etc/passwd`
 
-![](images/rce6.png)
+![](images/rce7.png)
 
 _Beneficios:_
 
@@ -170,26 +209,41 @@ _Beneficios:_
 
 - Evita ejecución de comandos peligrosos (rm -rf /, wget, curl, nc).
 
-- Escapa caracteres especiales con escapeshellcmd() para mayor seguridad.
-
 - Evita XSS con htmlspecialchars(), protegiendo la salida de comandos.
 
 **Ejecutar Comandos con Escapes Seguros**
 ---
 
-Si se necesita ejecutar comandos con argumentos, usar escapeshellarg() para evitar inyección de comandos.
+Si se necesita ejecutar comandos con argumentos, usar escapeshellcmd() para evitar inyección de comandos.
 
 Código seguro (rce.php con escapes para argumentos)
 
 ~~~
 <?php
-if (!isset($_GET['cmd'])) {
-        die("Falta el parámetro 'cmd'");
+if (isset($_GET['cmd'])) {
+    // Obtener el comando de la URL
+    $cmd = $_GET['cmd'];
+
+    // Usar escapeshellarg para proteger la entrada
+    $cmd_safe = escapeshellcmd($cmd);
+
+    // Ejecutar el comando de manera segura
+    $output = shell_exec($cmd_safe);
+    if (empty($output)) {
+            echo "Comando no permitido.";
+    } else {
+        // Mostrar la salida de forma segura
+        echo "<pre>" . htmlspecialchars($output) . "</pre>";
+    }
 }
-$command = escapeshellarg($_GET['cmd']);
-$output = shell_exec($command);
-echo htmlspecialchars($output, ENT_QUOTES, 'UTF-8');
 ?>
+- Escapa caracteres especiales con escapeshellcmd() para mayor seguridad.
+Si contienen caracteres especiales, exec no va a realizar ninguna consulta, por lo que comprobamos y mostramos aviso de error.
+
+Si queremos que sólo se utilicen comandos simples sin argumentos y sin concatenar, podemos añadir un paso de seguridad con escapeshellarg(). Cambiamos la línea:
+
+~~~
+    $cmd_safe = escapeshellarg($cmd);
 ~~~
 
 Beneficios:
@@ -200,13 +254,63 @@ Beneficios:
 
 - Mayor flexibilidad, pero más seguro que la ejecución directa de shell_exec().
 
+Ejemplo: Si alguien intenta enviar:
 
-![](images/rce6.png)
-![](images/rce6.png)
-![](images/rce6.png)
-![](images/rce6.png)
-![](images/rce6.png)
-![](images/rce6.png)
+~~~
+http://localhost/rce.php?cmd=ping 8.8.8.8; rm -rf /
+~~~
+La función **escapeshellarg()** convertirá la entrada en:  'ping 8.8.8.8; rm -rf/), eliminará todo el comando y no ejecuta nada. Por eso controlamos cadena vacía.
+
+![](images/rce9.png)
+
+**Deshabilitar shell_exec() en PHP**
+Si no se necesita ejecución de comandos en todo el servidor, deshabilitar las funciones peligrosas en php.ini.
+Editar php.ini, para ello utilizamos el editor de texto nano (o el que prefiramos) para abrir la configuración de PHP de nuestro contenedor
+
+~~~
+docker exec -it lamp-php83 /bin/bash
+~~~
+Si estamos utilizando la pila LAMP con docker del laborario podemos ver en el archivo de configuración docker-compose.yml que hemos cambiado la ubicación de php:
+
+![](images/rce10.png)
+
+Por lo tanto abrimos el archivo de configuración:
+
+> Aquí una puntualización. Si estamos usando el escenario multicontenedor del entorno de pruebas, podemos ver como en el php.ini tenemos unas configuraciones mínimas, pero tenemos preparados dos ficheros de configuración: php.ini-production y php.ini-development. Si vamos a poner nuestro LAMP o bien en un entorno de producción o de desarrollo deberíamos de renombrar el archivo correspondiente como php.ini para que se establezcan esas configuraciones.
+> ![](images/rce11.png)
+
+~~~
+sudo nano /usr/local/etc/php/php.ini
+
+~~~
+
+
+Buscar la línea disable_functions y agregar lo siguiente:
+
+~~~
+disable_functions = shell_exec, system, exec, passthru, popen, proc_open
+~~
+
+![](images/rce12.png)
+
+Guardar los cambios y reiniciar Apache para aplicar los cambios
+
+*Beneficios:*
+- Bloquea la ejecución de comandos a nivel de servidor, sin necesidad de modificar el código PHP.
+- Evita exploits y ejecución remota incluso si rce.php no está mitigado en el código.
+- Es la mejor opción si no necesitas ejecutar comandos en PHP.
+
+**Prueba Final**
+---
+
+Utilizamos el primer archivo vulnerable que teníamos y probamos intentar obtener el usuario con la URL con cmd=id:
+
+~~~
+http://localhost/rce.php?cmd=id
+~~~
+
+Si la mitigación funciona, se debería ver el mensaje "Comando no permitido." en pantalla. o en el caso de que utilizamos el entorno de pruebas, el error php:
+
 
 ## ENTREGA
 
