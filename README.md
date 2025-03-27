@@ -318,7 +318,7 @@ Buscar la línea disable_functions y agregar lo siguiente:
 
 ~~~
 disable_functions = shell_exec, system, exec, passthru, popen, proc_open
-~~
+~~~
 
 ![](images/rce12.png)
 
